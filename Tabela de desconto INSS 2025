@@ -1,0 +1,47 @@
+#include <stdio.h>
+
+int main() {
+    float salario, desconto, liquido;
+
+    printf("Digite o salário bruto (R$): ");
+    if (scanf("%f", &salario) != 1) {
+        printf("Entrada inválida.\n");
+        return 1;
+    }
+
+    // INSS 2025 — CLT, domésticos e avulsos
+    // Faixas e alíquotas com parcela a deduzir:
+    // Até R$ 1.518,00: 7,5% — dedução: R$ 0,00
+    // De R$ 1.518,01 a R$ 2.793,88: 9% — dedução: R$ 22,77
+    // De R$ 2.793,89 a R$ 4.190,83: 12% — dedução: R$ 106,59
+    // De R$ 4.190,84 a R$ 8.157,41: 14% — dedução: R$ 190,40
+
+    if (salario <= 1518.00f) {
+        desconto = salario * 0.075f;
+    }
+    else if (salario <= 2793.88f) {
+        desconto = salario * 0.09f - 22.77f;
+    }
+    else if (salario <= 4190.83f) {
+        desconto = salario * 0.12f - 106.59f;
+    }
+    else if (salario <= 8157.41f) {
+        desconto = salario * 0.14f - 190.40f;
+    }
+    else {
+        // Acima do teto: aplicar teto de contribuição
+        float teto = 8157.41f;
+        desconto = teto * 0.14f - 190.40f;
+    }
+
+    if (desconto < 0) desconto = 0; // Segurança contra valor negativo
+
+    liquido = salario - desconto;
+
+    printf("\n--- Resultado ---\n");
+    printf("Salário bruto.....: R$ %.2f\n", salario);
+    printf("Desconto INSS.....: R$ %.2f\n", desconto);
+    printf("Salário líquido...: R$ %.2f\n", liquido);
+
+    return 0;
+}
