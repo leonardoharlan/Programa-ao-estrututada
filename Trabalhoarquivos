@@ -1,0 +1,325 @@
+#include <stdio.h>
+#include <string.h>
+
+#define TAM 256
+
+void lerStr(char str[], int tam);
+void inserirFinalArquivo(char nomeArq[]);
+void listarArquivo(char nomeArq[]);
+void lerPosicaoEspecifica(char nomeArq[]);
+
+// novas funções pedidas
+void buscarNumeroNoArquivo(char nomeArq[]);
+void substituirNumeroNoArquivo(char nomeArq[]);
+void excluirNumeroDoArquivo(char nomeArq[]);
+
+int main() {
+    char nomeArq[TAM];
+    int opcao;
+
+    printf("Digite o nome do arquivo: ");
+    lerStr(nomeArq, TAM);
+    while (strlen(nomeArq) == 0) {
+        printf("Nome vazio e invalido!\n");
+        printf("Digite o nome do arquivo: ");
+        lerStr(nomeArq, TAM);
+    }
+
+    do {
+        printf("\n\nMENU\n");
+        printf("1 - Gravar um numero no final do arquivo\n");
+        printf("2 - Listar o conteudo do arquivo\n");
+        printf("3 - Imprimir valor especifico por posicao\n");
+        printf("4 - Buscar se um numero existe no arquivo\n");
+        printf("5 - Substituir um numero do arquivo por outro\n");
+        printf("6 - Excluir um numero do arquivo\n");
+        printf("Digite a sua opcao (0 p/ finalizar): ");
+        scanf("%d", &opcao);
+
+        switch (opcao) {
+            case 1:
+                inserirFinalArquivo(nomeArq);
+                break;
+            case 2:
+                printf("---------------- Listagem ----------------\n");
+                listarArquivo(nomeArq);
+                printf("------------------------------------------\n");
+                break;
+            case 3:
+                lerPosicaoEspecifica(nomeArq);
+                break;
+            case 4:
+                buscarNumeroNoArquivo(nomeArq);
+                break;
+            case 5:
+                substituirNumeroNoArquivo(nomeArq);
+                break;
+            case 6:
+                excluirNumeroDoArquivo(nomeArq);
+                break;
+            default:
+                if (opcao != 0) {
+                    printf("Opcao invalida!\n");
+                }
+        }
+    } while (opcao != 0);
+
+    return 0;
+}
+
+void lerStr(char str[], int tam) {
+    fgets(str, tam, stdin);
+    int tamDigitado = strlen(str);
+    if (tamDigitado > 0 && str[tamDigitado - 1] == '\n') {
+        str[tamDigitado - 1] = '\0';
+    }
+}
+
+void inserirFinalArquivo(char nomeArq[]) {
+    int status;
+    double num;
+    FILE *arq = fopen(nomeArq, "ab");
+    if (arq == NULL) {
+        printf("Nao pode abrir o arquivo!\n");
+        return;
+    }
+    printf("Digite um numero real: ");
+    scanf("%lf", &num);
+
+    status = fwrite(&num, sizeof(double), 1, arq);
+    if (status == 1) {
+        printf("Valor armazenado com sucesso!\n");
+    } else {
+        printf("Erro ao gravar o valor no arquivo!\n");
+    }
+    fclose(arq);
+}
+
+void listarArquivo(char nomeArq[]) {
+    int status;
+    double num;
+    FILE *arq = fopen(nomeArq, "rb");
+    if (arq == NULL) {
+        printf("Nao pode abrir o arquivo!\n");
+        return;
+    }
+
+    status = fread(&num, sizeof(double), 1, arq);
+    while (!feof(arq)) {
+        if (status != 1) {
+            printf("Erro na leitura do registro\n");
+        } else {
+            printf("%.3f\n", num);
+        }
+        status = fread(&num, sizeof(double), 1, arq);
+    }
+    fclose(arq);
+}
+
+void lerPosicaoEspecifica(char nomeArq[]) {
+    int status, pos;
+    double num;
+    FILE *arq = fopen(nomeArq, "rb");
+    if (arq == NULL) {
+        printf("Nao pode abrir o arquivo!\n");
+        return;
+    }
+
+    printf("Voce quer ler qual posicao (1 = primeiro numero): ");
+    scanf("%d", &pos);
+
+    if (pos <= 0) {
+        printf("Posicao invalida!\n");
+        fclose(arq);
+        return;
+    }
+
+    status = fseek(arq, (pos - 1) * (long)sizeof(double), SEEK_SET);
+    if (status != 0) {
+        printf("Posicao invalida!\n");
+        fclose(arq);
+        return;
+    }
+
+    status = fread(&num, sizeof(double), 1, arq);
+    if (status != 1) {
+        printf("Erro na leitura do registro / posicao inexistente!\n");
+    } else {
+        printf("Valor na posicao %d: %.3f\n", pos, num);
+    }
+    fclose(arq);
+}
+
+/* 4 - Buscar se um numero existe no arquivo */
+void buscarNumeroNoArquivo(char nomeArq[]) {
+    FILE *arq = fopen(nomeArq, "rb");
+    if (arq == NULL) {
+        printf("Nao pode abrir o arquivo!\n");
+        return;
+    }
+
+    double alvo, num;
+    int achou = 0;
+    int status;
+
+    printf("Digite o numero que deseja buscar: ");
+    scanf("%lf", &alvo);
+
+    status = fread(&num, sizeof(double), 1, arq);
+    while (!feof(arq)) {
+        if (status != 1) {
+            printf("Erro na leitura do registro\n");
+            break;
+        }
+        if (num == alvo) {
+            achou = 1;
+            break;
+        }
+        status = fread(&num, sizeof(double), 1, arq);
+    }
+
+    if (achou) {
+        printf("O numero %.3f ESTA no arquivo.\n", alvo);
+    } else {
+        printf("O numero %.3f NAO esta no arquivo.\n", alvo);
+    }
+
+    fclose(arq);
+}
+
+/* 5 - Substituir um numero antigo por um novo */
+void substituirNumeroNoArquivo(char nomeArq[]) {
+    char tempName[TAM];
+    FILE *orig, *temp;
+    double antigo, novo, num;
+    int status;
+    int houveSubstituicao = 0;
+
+    printf("Digite o numero que deseja substituir: ");
+    scanf("%lf", &antigo);
+    printf("Digite o novo numero: ");
+    scanf("%lf", &novo);
+
+    orig = fopen(nomeArq, "rb");
+    if (orig == NULL) {
+        printf("Nao pode abrir o arquivo original para leitura!\n");
+        return;
+    }
+
+    snprintf(tempName, TAM, "%s.tmp", nomeArq);
+
+    temp = fopen(tempName, "wb");
+    if (temp == NULL) {
+        printf("Nao pode criar arquivo temporario!\n");
+        fclose(orig);
+        return;
+    }
+
+    status = fread(&num, sizeof(double), 1, orig);
+    while (!feof(orig)) {
+        if (status != 1) {
+            printf("Erro na leitura do registro\n");
+            break;
+        }
+
+        if (num == antigo) {
+            num = novo;
+            houveSubstituicao = 1;
+        }
+
+        if (fwrite(&num, sizeof(double), 1, temp) != 1) {
+            printf("Erro ao gravar no temporario!\n");
+            break;
+        }
+
+        status = fread(&num, sizeof(double), 1, orig);
+    }
+
+    fclose(orig);
+    fclose(temp);
+
+    if (!houveSubstituicao) {
+        printf("Nenhuma ocorrencia de %.3f encontrada. Nao houve alteracao.\n", antigo);
+        remove(tempName);
+        return;
+    }
+
+    if (remove(nomeArq) != 0) {
+        printf("Erro ao remover arquivo original!\n");
+        return;
+    }
+
+    if (rename(tempName, nomeArq) != 0) {
+        printf("Erro ao renomear arquivo temporario!\n");
+        return;
+    }
+
+    printf("Substituicao concluida com sucesso!\n");
+}
+
+/* 6 - Excluir um numero do arquivo */
+void excluirNumeroDoArquivo(char nomeArq[]) {
+    char tempName[TAM];
+    FILE *orig, *temp;
+    double alvo, num;
+    int status;
+    int removeuAlgum = 0;
+
+    printf("Digite o numero que deseja excluir: ");
+    scanf("%lf", &alvo);
+
+    orig = fopen(nomeArq, "rb");
+    if (orig == NULL) {
+        printf("Nao pode abrir o arquivo original para leitura!\n");
+        return;
+    }
+
+    snprintf(tempName, TAM, "%s.tmp", nomeArq);
+    temp = fopen(tempName, "wb");
+    if (temp == NULL) {
+        printf("Nao pode criar arquivo temporario!\n");
+        fclose(orig);
+        return;
+    }
+
+    status = fread(&num, sizeof(double), 1, orig);
+    while (!feof(orig)) {
+        if (status != 1) {
+            printf("Erro na leitura do registro\n");
+            break;
+        }
+
+        if (num == alvo) {
+            removeuAlgum = 1;
+            // não escreve este número
+        } else {
+            if (fwrite(&num, sizeof(double), 1, temp) != 1) {
+                printf("Erro ao gravar no temporario!\n");
+                break;
+            }
+        }
+
+        status = fread(&num, sizeof(double), 1, orig);
+    }
+
+    fclose(orig);
+    fclose(temp);
+
+    if (!removeuAlgum) {
+        printf("Nenhuma ocorrencia de %.3f encontrada. Nada foi excluido.\n", alvo);
+        remove(tempName);
+        return;
+    }
+
+    if (remove(nomeArq) != 0) {
+        printf("Erro ao remover arquivo original!\n");
+        return;
+    }
+
+    if (rename(tempName, nomeArq) != 0) {
+        printf("Erro ao renomear arquivo temporario!\n");
+        return;
+    }
+
+    printf("Exclusao concluida com sucesso!\n");
+}
